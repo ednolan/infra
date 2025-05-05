@@ -74,8 +74,9 @@ def main():
                         action="store_true")
     args = parser.parse_args();
     script_path = pathlib.Path(__file__).resolve().parent
-    script_parent = script_path.parent
-    submodule_dirs = find_submodule_dirs_in(script_parent)
+    beman_module_directory = script_path.parent
+    infra_parent = beman_module_directory.parent
+    submodule_dirs = find_submodule_dirs_in(infra_parent)
     print("Found bemanmodules at: ", submodule_dirs)
     submodules = [get_submodule(dir) for dir in submodule_dirs]
     for submodule in submodules:
