@@ -1,4 +1,6 @@
 import beman_module
+import pathlib
+import tempfile
 
 def test_parse_args():
     def plain_update():
@@ -53,3 +55,59 @@ def test_parse_args():
         assert args.command == 'status'
         assert args.paths == ['infra/', 'foobar/']
     status_multiple_modules()
+
+def test_parse_beman_module_file():
+    def valid_file():
+        tmpfile = tempfile.NamedTemporaryFile()
+        tmpfile.write('[beman_module]\n'.encode('utf-8'))
+        tmpfile.write(
+            'remote=git@github.com:bemanproject/infra.git\n'.encode('utf-8'))
+        tmpfile.write(
+            'commit_hash=9b88395a86c4290794e503e94d8213b6c442ae77\n'.encode('utf-8'))
+        tmpfile.flush()
+        module = beman_module.parse_beman_module_file(tmpfile.name)
+        assert module.dirpath == pathlib.Path(tmpfile.name).resolve().parent
+        assert module.remote == 'git@github.com:bemanproject/infra.git'
+        assert module.commit_hash == '9b88395a86c4290794e503e94d8213b6c442ae77'
+    valid_file()
+    def invalid_file_missing_remote():
+        threw = False
+        try:
+            tmpfile = tempfile.NamedTemporaryFile()
+            tmpfile.write('[beman_module]\n'.encode('utf-8'))
+            tmpfile.write(
+                'commit_hash=9b88395a86c4290794e503e94d8213b6c442ae77\n'.encode('utf-8'))
+            tmpfile.flush()
+            module = beman_module.parse_beman_module_file(tmpfile.name)
+        except:
+            threw = True
+        assert threw
+    invalid_file_missing_remote()
+    def invalid_file_missing_commit_hash():
+        threw = False
+        try:
+            tmpfile = tempfile.NamedTemporaryFile()
+            tmpfile.write('[beman_module]\n'.encode('utf-8'))
+            tmpfile.write(
+                'remote=git@github.com:bemanproject/infra.git\n'.encode('utf-8'))
+            tmpfile.flush()
+            module = beman_module.parse_beman_module_file(tmpfile.name)
+        except:
+            threw = True
+        assert threw
+    invalid_file_missing_commit_hash()
+    def invalid_file_wrong_section():
+        threw = False
+        try:
+            tmpfile = tempfile.NamedTemporaryFile()
+            tmpfile.write('[invalid]\n'.encode('utf-8'))
+            tmpfile.write(
+                'remote=git@github.com:bemanproject/infra.git\n'.encode('utf-8'))
+            tmpfile.write(
+                'commit_hash=9b88395a86c4290794e503e94d8213b6c442ae77\n'.encode('utf-8'))
+            tmpfile.flush()
+            module = beman_module.parse_beman_module_file(tmpfile.name)
+        except:
+            threw = True
+        assert threw
+    invalid_file_wrong_section()

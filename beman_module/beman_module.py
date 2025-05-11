@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import configparser
 import filecmp
 import os
 import pathlib
@@ -21,14 +22,34 @@ def directory_compare(dir1, dir2, ignore):
     return True
 
 class BemanModule:
-    def __init__(self, dirpath, url, commit_hash):
+    def __init__(self, dirpath, remote, commit_hash):
         self.dirpath = dirpath
-        self.url = url
+        self.remote = remote
         self.commit_hash = commit_hash
 
+def parse_beman_module_file(path):
+    config = configparser.ConfigParser()
+    read_result = config.read(path)
+    def fail():
+        raise Exception(f'Failed to parse {path} as a .beman_module file')
+    if not read_result:
+        fail()
+    if not 'beman_module' in config:
+        fail()
+    if not 'remote' in config['beman_module']:
+        fail()
+    if not 'commit_hash' in config['beman_module']:
+        fail()
+    return BemanModule(
+        pathlib.Path(path).resolve().parent,
+        config['beman_module']['remote'], config['beman_module']['commit_hash'])
+
 def get_beman_module(dir):
-    with open(os.path.join(dir, '.beman_module'), 'r') as f:
-        return BemanModule(dir, f.readline().strip(), f.readline().strip())
+    beman_module_filepath = os.path.join(dir, '.beman_module')
+    if os.path.isfile(beman_module_filepath):
+        return parse_beman_module_file(beman_module_filepath)
+    else:
+        return None
 
 def find_beman_module_dirs_in(dir):
     assert os.path.isdir(dir)
@@ -38,10 +59,13 @@ def find_beman_module_dirs_in(dir):
             result.append(dirpath)
     return result
 
+def cwd_git_repository_path():
+    pass
+
 def pull_beman_module_into_tmpdir(beman_module):
     tmpdir = tempfile.TemporaryDirectory()
     subprocess.run(
-        ['git', 'clone', beman_module.url, tmpdir.name], capture_output=True, check=True)
+        ['git', 'clone', beman_module.remote, tmpdir.name], capture_output=True, check=True)
     subprocess.run(
         ['git', '-C', tmpdir.name, 'reset', '--hard', beman_module.commit_hash],
         capture_output=True, check=True)
@@ -49,22 +73,19 @@ def pull_beman_module_into_tmpdir(beman_module):
 
 def beman_module_pull(beman_module):
     print(
-        'Pulling', beman_module.url, 'at commit', beman_module.commit_hash, 'to',
+        'Pulling', beman_module.remote, 'at commit', beman_module.commit_hash, 'to',
         beman_module.dirpath)
     tmpdir = pull_beman_module_into_tmpdir(beman_module)
     shutil.rmtree(os.path.join(tmpdir.name, '.git'))
     shutil.copytree(tmpdir.name, beman_module.dirpath, dirs_exist_ok=True)
 
-def beman_module_check(beman_module):
-    print(
-        'Checking', beman_module.dirpath, 'equivalence with', beman_module.url, 'at commit',
-        beman_module.commit_hash)
+def beman_module_status(beman_module):
     tmpdir = pull_beman_module_into_tmpdir(beman_module)
-    if not directory_compare(tmpdir.name, beman_module.dirpath, ['.beman_module', '.git']):
-        print(
-            'Mismatch between', beman_module.dirpath, 'and', beman_module.url, 'at commit',
-            beman_module.commit_hash, file=sys.stderr)
-        sys.exit(1)
+    if directory_compare(tmpdir.name, beman_module.dirpath, ['.beman_module', '.git']):
+        status_character=' '
+    else:
+        status_character='+'
+    print(status_character, beman_module.commit_hash)
 
 def update_command(remote, beman_module_path):
     pass
@@ -73,7 +94,20 @@ def add_command(repository, path):
     pass
 
 def status_command(paths):
-    pass
+    if not paths:
+        parent_repo_path = cwd_git_repository_path()
+        if not parent_repo_path:
+            raise Exception('Error: this is not a git repository')
+        beman_modules = find_beman_module_dirs_in(parent_repo_path)
+    else:
+        beman_modules = []
+        for path in paths:
+            beman_module = get_beman_module(path)
+            if not beman_module:
+                raise Exception(f'Error: {path} is not a beman_module')
+            beman_modules += path
+    for beman_module in beman_modules:
+        beman_module_status(beman_module)
 
 def get_parser():
     parser = argparse.ArgumentParser(description='Beman pseudo-submodule tool')
@@ -107,12 +141,19 @@ def run_command(args):
     elif args.command == 'status':
         status_command(args.paths)
     else:
-        print(usage(), file=sys.stderr)
-        sys.exit(1)
+        raise Exception(usage())
+
+def check_for_git():
+    pass
 
 def main():
-    args = parse_args(sys.argv[1:])
-    run_command(args)
+    try:
+        check_for_git()
+        args = parse_args(sys.argv[1:])
+        run_command(args)
+    except Exception as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
     # script_path = pathlib.Path(__file__).resolve().parent
     # beman_module_directory = script_path.parent
     # infra_parent = beman_module_directory.parent
