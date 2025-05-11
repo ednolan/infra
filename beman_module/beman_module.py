@@ -20,72 +20,85 @@ def directory_compare(dir1, dir2, ignore):
             return False
     return True
 
-class Submodule:
+class BemanModule:
     def __init__(self, dirpath, url, commit_hash):
         self.dirpath = dirpath
         self.url = url
         self.commit_hash = commit_hash
 
-def get_submodule(dir):
-    with open(os.path.join(dir, ".bemanmodule"), 'r') as f:
-        return Submodule(dir, f.readline().strip(), f.readline().strip())
+def get_beman_module(dir):
+    with open(os.path.join(dir, '.beman_module'), 'r') as f:
+        return BemanModule(dir, f.readline().strip(), f.readline().strip())
 
-def find_submodule_dirs_in(dir):
+def find_beman_module_dirs_in(dir):
     assert os.path.isdir(dir)
     result = []
     for dirpath, _, filenames in os.walk(dir):
-        if ".bemanmodule" in filenames:
+        if '.beman_module' in filenames:
             result.append(dirpath)
     return result
 
-def pull_submodule_into_tmpdir(submodule):
+def pull_beman_module_into_tmpdir(beman_module):
     tmpdir = tempfile.TemporaryDirectory()
     subprocess.run(
-        ["git", "clone", submodule.url, tmpdir.name], capture_output=True, check=True)
+        ['git', 'clone', beman_module.url, tmpdir.name], capture_output=True, check=True)
     subprocess.run(
-        ["git", "-C", tmpdir.name, "reset", "--hard", submodule.commit_hash],
+        ['git', '-C', tmpdir.name, 'reset', '--hard', beman_module.commit_hash],
         capture_output=True, check=True)
     return tmpdir
 
-def submodule_pull(submodule):
+def beman_module_pull(beman_module):
     print(
-        "Pulling", submodule.url, "at commit", submodule.commit_hash, "to",
-        submodule.dirpath)
-    tmpdir = pull_submodule_into_tmpdir(submodule)
-    shutil.rmtree(os.path.join(tmpdir.name, ".git"))
-    shutil.copytree(tmpdir.name, submodule.dirpath, dirs_exist_ok=True)
+        'Pulling', beman_module.url, 'at commit', beman_module.commit_hash, 'to',
+        beman_module.dirpath)
+    tmpdir = pull_beman_module_into_tmpdir(beman_module)
+    shutil.rmtree(os.path.join(tmpdir.name, '.git'))
+    shutil.copytree(tmpdir.name, beman_module.dirpath, dirs_exist_ok=True)
 
-def submodule_check(submodule):
+def beman_module_check(beman_module):
     print(
-        "Checking", submodule.dirpath, "equivalence with", submodule.url, "at commit",
-        submodule.commit_hash)
-    tmpdir = pull_submodule_into_tmpdir(submodule)
-    if not directory_compare(tmpdir.name, submodule.dirpath, [".bemanmodule", ".git"]):
+        'Checking', beman_module.dirpath, 'equivalence with', beman_module.url, 'at commit',
+        beman_module.commit_hash)
+    tmpdir = pull_beman_module_into_tmpdir(beman_module)
+    if not directory_compare(tmpdir.name, beman_module.dirpath, ['.beman_module', '.git']):
         print(
-            "Mismatch between", submodule.dirpath, "and", submodule.url, "at commit",
-            submodule.commit_hash, file=sys.stderr)
+            'Mismatch between', beman_module.dirpath, 'and', beman_module.url, 'at commit',
+            beman_module.commit_hash, file=sys.stderr)
         sys.exit(1)
 
-def main():
-    parser = argparse.ArgumentParser(description="Beman pseudo-submodule tool")
-    parser.add_argument('--pull', help="Update all pseudo-submodules to latest main",
-                        action="store_true")
-    parser.add_argument('--check', help="Check pseudo-submodule consistency",
-                        action="store_true")
-    args = parser.parse_args();
-    script_path = pathlib.Path(__file__).resolve().parent
-    beman_module_directory = script_path.parent
-    infra_parent = beman_module_directory.parent
-    submodule_dirs = find_submodule_dirs_in(infra_parent)
-    print("Found bemanmodules at: ", submodule_dirs)
-    submodules = [get_submodule(dir) for dir in submodule_dirs]
-    for submodule in submodules:
-        if args.pull:
-            submodule_pull(submodule)
-        elif args.check:
-            submodule_check(submodule)
-        else:
-            raise Exception("Specify either --pull or --check")
+def parse_args(args):
+    parser = argparse.ArgumentParser(description='Beman pseudo-submodule tool')
+    subparsers = parser.add_subparsers(dest='command', help='available commands')
+    parser_update = subparsers.add_parser('update', help='Update beman_modules')
+    parser_update.add_argument(
+        '--remote', action='store_true',
+        help='Update beman_module to its latest from upstream')
+    parser_update.add_argument(
+        'beman_module', nargs='?', help='Relative path to beman_module to update')
+    parser_add = subparsers.add_parser('add', help='Add a new beman_module')
+    parser_add.add_argument('repository', help='Repository to add')
+    parser_add.add_argument(
+        'path', nargs='?', help='Path where the repository will be added')
+    parser_status = subparsers.add_parser(
+        'status', help='Show the status of beman_modules')
+    parser_status.add_argument('paths', nargs='*')
+    return parser.parse_args(args);
 
-if __name__ == "__main__":
+def main():
+    args = parse_args(sys.argv[1:])
+    # script_path = pathlib.Path(__file__).resolve().parent
+    # beman_module_directory = script_path.parent
+    # infra_parent = beman_module_directory.parent
+    # beman_module_dirs = find_beman_module_dirs_in(infra_parent)
+    # print('Found beman_modules at: ', beman_module_dirs)
+    # beman_modules = [get_beman_module(dir) for dir in beman_module_dirs]
+    # for beman_module in beman_modules:
+    #     if args.pull:
+    #         beman_module_pull(beman_module)
+    #     elif args.check:
+    #         beman_module_check(beman_module)
+    #     else:
+    #         raise Exception('Specify either --pull or --check')
+
+if __name__ == '__main__':
     main()
