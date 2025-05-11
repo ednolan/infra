@@ -66,26 +66,53 @@ def beman_module_check(beman_module):
             beman_module.commit_hash, file=sys.stderr)
         sys.exit(1)
 
-def parse_args(args):
+def update_command(remote, beman_module_path):
+    pass
+
+def add_command(repository, path):
+    pass
+
+def status_command(paths):
+    pass
+
+def get_parser():
     parser = argparse.ArgumentParser(description='Beman pseudo-submodule tool')
     subparsers = parser.add_subparsers(dest='command', help='available commands')
-    parser_update = subparsers.add_parser('update', help='Update beman_modules')
+    parser_update = subparsers.add_parser('update', help='update beman_modules')
     parser_update.add_argument(
         '--remote', action='store_true',
-        help='Update beman_module to its latest from upstream')
+        help='update a beman_module to its latest from upstream')
     parser_update.add_argument(
-        'beman_module', nargs='?', help='Relative path to beman_module to update')
-    parser_add = subparsers.add_parser('add', help='Add a new beman_module')
-    parser_add.add_argument('repository', help='Repository to add')
+        'beman_module_path', nargs='?', help='relative path to the beman_module to update')
+    parser_add = subparsers.add_parser('add', help='add a new beman_module')
+    parser_add.add_argument('repository', help='git repository to add')
     parser_add.add_argument(
-        'path', nargs='?', help='Path where the repository will be added')
+        'path', nargs='?', help='path where the repository will be added')
     parser_status = subparsers.add_parser(
-        'status', help='Show the status of beman_modules')
+        'status', help='show the status of beman_modules')
     parser_status.add_argument('paths', nargs='*')
-    return parser.parse_args(args);
+    return parser
+
+def parse_args(args):
+    return get_parser().parse_args(args);
+
+def usage():
+    return get_parser().format_help()
+
+def run_command(args):
+    if args.command == 'update':
+        update_command(args.remote, args.beman_module_path)
+    elif args.command == 'add':
+        add_command(args.repository, args.path)
+    elif args.command == 'status':
+        status_command(args.paths)
+    else:
+        print(usage(), file=sys.stderr)
+        sys.exit(1)
 
 def main():
     args = parse_args(sys.argv[1:])
+    run_command(args)
     # script_path = pathlib.Path(__file__).resolve().parent
     # beman_module_directory = script_path.parent
     # infra_parent = beman_module_directory.parent
