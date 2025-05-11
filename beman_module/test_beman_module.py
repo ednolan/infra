@@ -78,7 +78,7 @@ def test_parse_beman_module_file():
             tmpfile.write(
                 'commit_hash=9b88395a86c4290794e503e94d8213b6c442ae77\n'.encode('utf-8'))
             tmpfile.flush()
-            module = beman_module.parse_beman_module_file(tmpfile.name)
+            beman_module.parse_beman_module_file(tmpfile.name)
         except:
             threw = True
         assert threw
@@ -91,7 +91,7 @@ def test_parse_beman_module_file():
             tmpfile.write(
                 'remote=git@github.com:bemanproject/infra.git\n'.encode('utf-8'))
             tmpfile.flush()
-            module = beman_module.parse_beman_module_file(tmpfile.name)
+            beman_module.parse_beman_module_file(tmpfile.name)
         except:
             threw = True
         assert threw
@@ -106,7 +106,7 @@ def test_parse_beman_module_file():
             tmpfile.write(
                 'commit_hash=9b88395a86c4290794e503e94d8213b6c442ae77\n'.encode('utf-8'))
             tmpfile.flush()
-            module = beman_module.parse_beman_module_file(tmpfile.name)
+            beman_module.parse_beman_module_file(tmpfile.name)
         except:
             threw = True
         assert threw

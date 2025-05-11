@@ -60,7 +60,15 @@ def find_beman_module_dirs_in(dir):
     return result
 
 def cwd_git_repository_path():
-    pass
+    process = subprocess.run(
+        ['git', 'rev-parse', '--show-toplevel'],
+        capture_output=True, text=True, check=False, cwd=os.getcwd())
+    if process.returncode == 0:
+        return process.stdout.strip()
+    elif "fatal: not a git repository" in process.stderr:
+        return None
+    else:
+        raise Exception("git rev-parse --show-toplevel failed")
 
 def pull_beman_module_into_tmpdir(beman_module):
     tmpdir = tempfile.TemporaryDirectory()
@@ -97,15 +105,17 @@ def status_command(paths):
     if not paths:
         parent_repo_path = cwd_git_repository_path()
         if not parent_repo_path:
-            raise Exception('Error: this is not a git repository')
-        beman_modules = find_beman_module_dirs_in(parent_repo_path)
+            raise Exception('this is not a git repository')
+        beman_modules = [
+            parse_beman_module_file(os.path.join(dir, '.beman_module'))
+            for dir in find_beman_module_dirs_in(parent_repo_path)]
     else:
         beman_modules = []
         for path in paths:
             beman_module = get_beman_module(path)
             if not beman_module:
-                raise Exception(f'Error: {path} is not a beman_module')
-            beman_modules += path
+                raise Exception(f'{path} is not a beman_module')
+            beman_modules.append(beman_module)
     for beman_module in beman_modules:
         beman_module_status(beman_module)
 
@@ -147,13 +157,13 @@ def check_for_git():
     pass
 
 def main():
-    try:
+    # try:
         check_for_git()
         args = parse_args(sys.argv[1:])
         run_command(args)
-    except Exception as e:
-        print(e, file=sys.stderr)
-        sys.exit(1)
+    # except Exception as e:
+    #     print("Error:", e, file=sys.stderr)
+    #     sys.exit(1)
     # script_path = pathlib.Path(__file__).resolve().parent
     # beman_module_directory = script_path.parent
     # infra_parent = beman_module_directory.parent
