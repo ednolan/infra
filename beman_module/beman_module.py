@@ -190,13 +190,21 @@ def run_command(args):
     else:
         raise Exception(usage())
 
-def check_for_git():
-    pass
+def check_for_git(path):
+    env = os.environ.copy()
+    if path is not None:
+        env["PATH"] = path
+    return shutil.which("git", path=env.get("PATH")) is not None
 
 def main():
-    check_for_git()
-    args = parse_args(sys.argv[1:])
-    run_command(args)
+    try:
+        if not check_for_git(None):
+            raise Exception('git not found in PATH')
+        args = parse_args(sys.argv[1:])
+        run_command(args)
+    except Exception as e:
+        print("Error:", e, file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()

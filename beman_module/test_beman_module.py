@@ -3,6 +3,7 @@ import os
 import pathlib
 import pytest
 import shutil
+import stat
 import subprocess
 import tempfile
 
@@ -284,7 +285,13 @@ def test_status_command_with_path(capsys):
     os.chdir(original_cwd)
 
 def test_check_for_git():
-    pass
+    tmpdir = tempfile.TemporaryDirectory()
+    assert not beman_module.check_for_git(tmpdir.name)
+    fake_git_path = os.path.join(tmpdir.name, 'git')
+    with open(fake_git_path, 'w'):
+        pass
+    os.chmod(fake_git_path, stat.S_IRWXU)
+    assert beman_module.check_for_git(tmpdir.name)
 
 def test_parse_args():
     def plain_update():
