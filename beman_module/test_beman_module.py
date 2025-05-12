@@ -4,59 +4,44 @@ import os
 import subprocess
 import tempfile
 
-def test_parse_args():
-    def plain_update():
-        args = beman_module.parse_args(['update'])
-        assert args.command == 'update'
-        assert not args.remote
-        assert not args.beman_module_path
-    plain_update()
-    def update_remote():
-        args = beman_module.parse_args(['update', '--remote'])
-        assert args.command == 'update'
-        assert args.remote
-        assert not args.beman_module_path
-    update_remote()
-    def update_path():
-        args = beman_module.parse_args(['update', 'infra/'])
-        assert args.command == 'update'
-        assert not args.remote
-        assert args.beman_module_path == 'infra/'
-    update_path()
-    def update_path_remote():
-        args = beman_module.parse_args(['update', '--remote', 'infra/'])
-        assert args.command == 'update'
-        assert args.remote
-        assert args.beman_module_path == 'infra/'
-    update_path_remote()
-    def plain_add():
-        args = beman_module.parse_args(['add', 'git@github.com:bemanproject/infra.git'])
-        assert args.command == 'add'
-        assert args.repository == 'git@github.com:bemanproject/infra.git'
-        assert not args.path
-    plain_add()
-    def add_path():
-        args = beman_module.parse_args(
-            ['add', 'git@github.com:bemanproject/infra.git', 'infra/'])
-        assert args.command == 'add'
-        assert args.repository == 'git@github.com:bemanproject/infra.git'
-        assert args.path == 'infra/'
-    add_path()
-    def plain_status():
-        args = beman_module.parse_args(['status'])
-        assert args.command == 'status'
-        assert args.paths == []
-    plain_status()
-    def status_one_module():
-        args = beman_module.parse_args(['status', 'infra/'])
-        assert args.command == 'status'
-        assert args.paths == ['infra/']
-    status_one_module()
-    def status_multiple_modules():
-        args = beman_module.parse_args(['status', 'infra/', 'foobar/'])
-        assert args.command == 'status'
-        assert args.paths == ['infra/', 'foobar/']
-    status_multiple_modules()
+def create_test_git_repository():
+    tmpdir = tempfile.TemporaryDirectory()
+    subprocess.run(['git', 'init'], check=True, cwd=tmpdir.name, capture_output=True)
+    with open(os.path.join(tmpdir.name, 'a.txt'), 'w') as f:
+        f.write('a')
+
+    subprocess.run(
+        ['git', 'add', 'a.txt'], check=True, cwd=tmpdir.name, capture_output=True)
+    subprocess.run(
+        ['git', 'commit', '-m', 'test', '--author=test <test@example.com>'],
+        check=True,
+        cwd=tmpdir.name,
+        capture_output=True)
+    return tmpdir
+
+def test_directory_compare():
+    def create_dir_structure(dir_path):
+        bar_path = os.path.join(dir_path, 'bar')
+        os.makedirs(bar_path)
+
+        with open(os.path.join(dir_path, 'foo.txt'), 'w') as f:
+            f.write('foo')
+        with open(os.path.join(bar_path, 'baz.txt'), 'w') as f:
+            f.write('baz')
+
+    with tempfile.TemporaryDirectory() as dir_a, \
+         tempfile.TemporaryDirectory() as dir_b:
+
+        create_dir_structure(dir_a)
+        create_dir_structure(dir_b)
+
+        assert beman_module.directory_compare(dir_a, dir_b, [])
+
+        with open(os.path.join(os.path.join(dir_a, 'bar'), 'quux.txt'), 'w') as f:
+            f.write('quux')
+
+        assert not beman_module.directory_compare(dir_a, dir_b, [])
+        assert beman_module.directory_compare(dir_a, dir_b, ['quux.txt'])
 
 def test_parse_beman_module_file():
     def valid_file():
@@ -114,6 +99,12 @@ def test_parse_beman_module_file():
         assert threw
     invalid_file_wrong_section()
 
+def test_get_beman_module():
+    pass
+
+def test_find_beman_modules_in():
+    pass
+
 def test_cwd_git_repository_path():
     original_cwd = os.getcwd()
     tmpdir = tempfile.TemporaryDirectory()
@@ -122,3 +113,75 @@ def test_cwd_git_repository_path():
     subprocess.run(['git', 'init'])
     assert beman_module.cwd_git_repository_path() == tmpdir.name
     os.chdir(original_cwd)
+
+def test_pull_beman_module_into_tmpdir():
+    pass
+
+def test_beman_module_pull():
+    pass
+
+def test_beman_module_status():
+    pass
+
+def test_update_command():
+    pass
+
+def test_status_command():
+    pass
+
+def test_check_for_git():
+    pass
+
+def test_parse_args():
+    def plain_update():
+        args = beman_module.parse_args(['update'])
+        assert args.command == 'update'
+        assert not args.remote
+        assert not args.beman_module_path
+    plain_update()
+    def update_remote():
+        args = beman_module.parse_args(['update', '--remote'])
+        assert args.command == 'update'
+        assert args.remote
+        assert not args.beman_module_path
+    update_remote()
+    def update_path():
+        args = beman_module.parse_args(['update', 'infra/'])
+        assert args.command == 'update'
+        assert not args.remote
+        assert args.beman_module_path == 'infra/'
+    update_path()
+    def update_path_remote():
+        args = beman_module.parse_args(['update', '--remote', 'infra/'])
+        assert args.command == 'update'
+        assert args.remote
+        assert args.beman_module_path == 'infra/'
+    update_path_remote()
+    def plain_add():
+        args = beman_module.parse_args(['add', 'git@github.com:bemanproject/infra.git'])
+        assert args.command == 'add'
+        assert args.repository == 'git@github.com:bemanproject/infra.git'
+        assert not args.path
+    plain_add()
+    def add_path():
+        args = beman_module.parse_args(
+            ['add', 'git@github.com:bemanproject/infra.git', 'infra/'])
+        assert args.command == 'add'
+        assert args.repository == 'git@github.com:bemanproject/infra.git'
+        assert args.path == 'infra/'
+    add_path()
+    def plain_status():
+        args = beman_module.parse_args(['status'])
+        assert args.command == 'status'
+        assert args.paths == []
+    plain_status()
+    def status_one_module():
+        args = beman_module.parse_args(['status', 'infra/'])
+        assert args.command == 'status'
+        assert args.paths == ['infra/']
+    status_one_module()
+    def status_multiple_modules():
+        args = beman_module.parse_args(['status', 'infra/', 'foobar/'])
+        assert args.command == 'status'
+        assert args.paths == ['infra/', 'foobar/']
+    status_multiple_modules()
