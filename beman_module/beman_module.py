@@ -149,7 +149,7 @@ def status_command(paths):
         beman_modules = find_beman_modules_in(parent_repo_path)
     else:
         beman_modules = []
-        for path in paths:
+        for path in sorted(paths):
             beman_module = get_beman_module(path)
             if not beman_module:
                 raise Exception(f'{path} is not a beman_module')
