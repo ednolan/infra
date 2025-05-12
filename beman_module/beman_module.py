@@ -51,18 +51,18 @@ def get_beman_module(dir):
     else:
         return None
 
-def find_beman_module_dirs_in(dir):
+def find_beman_modules_in(dir):
     assert os.path.isdir(dir)
     result = []
     for dirpath, _, filenames in os.walk(dir):
         if '.beman_module' in filenames:
-            result.append(dirpath)
+            result.append(parse_beman_module_file(os.path.join(dirpath, '.beman_module')))
     return result
 
 def cwd_git_repository_path():
     process = subprocess.run(
         ['git', 'rev-parse', '--show-toplevel'],
-        capture_output=True, text=True, check=False, cwd=os.getcwd())
+        capture_output=True, text=True, check=False)
     if process.returncode == 0:
         return process.stdout.strip()
     elif "fatal: not a git repository" in process.stderr:
@@ -106,9 +106,7 @@ def status_command(paths):
         parent_repo_path = cwd_git_repository_path()
         if not parent_repo_path:
             raise Exception('this is not a git repository')
-        beman_modules = [
-            parse_beman_module_file(os.path.join(dir, '.beman_module'))
-            for dir in find_beman_module_dirs_in(parent_repo_path)]
+        beman_modules = find_beman_modules_in(parent_repo_path)
     else:
         beman_modules = []
         for path in paths:

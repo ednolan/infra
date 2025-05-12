@@ -1,5 +1,7 @@
 import beman_module
 import pathlib
+import os
+import subprocess
 import tempfile
 
 def test_parse_args():
@@ -111,3 +113,12 @@ def test_parse_beman_module_file():
             threw = True
         assert threw
     invalid_file_wrong_section()
+
+def test_cwd_git_repository_path():
+    original_cwd = os.getcwd()
+    tmpdir = tempfile.TemporaryDirectory()
+    os.chdir(tmpdir.name)
+    assert not beman_module.cwd_git_repository_path()
+    subprocess.run(['git', 'init'])
+    assert beman_module.cwd_git_repository_path() == tmpdir.name
+    os.chdir(original_cwd)
