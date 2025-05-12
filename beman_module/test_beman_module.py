@@ -13,10 +13,8 @@ def create_test_git_repository():
     subprocess.run(
         ['git', 'add', 'a.txt'], check=True, cwd=tmpdir.name, capture_output=True)
     subprocess.run(
-        ['git', 'commit', '-m', 'test', '--author=test <test@example.com>'],
-        check=True,
-        cwd=tmpdir.name,
-        capture_output=True)
+        ['git', 'commit', '-m', 'test', '--author=test <test@example.com>'], check=True,
+        cwd=tmpdir.name, capture_output=True)
     return tmpdir
 
 def test_directory_compare():
@@ -53,7 +51,7 @@ def test_parse_beman_module_file():
             'commit_hash=9b88395a86c4290794e503e94d8213b6c442ae77\n'.encode('utf-8'))
         tmpfile.flush()
         module = beman_module.parse_beman_module_file(tmpfile.name)
-        assert module.dirpath == pathlib.Path(tmpfile.name).resolve().parent
+        assert module.dirpath == str(pathlib.Path(tmpfile.name).resolve().parent)
         assert module.remote == 'git@github.com:bemanproject/infra.git'
         assert module.commit_hash == '9b88395a86c4290794e503e94d8213b6c442ae77'
     valid_file()
@@ -100,10 +98,34 @@ def test_parse_beman_module_file():
     invalid_file_wrong_section()
 
 def test_get_beman_module():
-    pass
+    tmpdir = create_test_git_repository()
+    tmpdir2 = create_test_git_repository()
+    original_cwd = os.getcwd()
+    os.chdir(tmpdir2.name)
+    beman_module.add_command(tmpdir.name, 'foo')
+    assert beman_module.get_beman_module('foo')
+    os.remove('foo/.beman_module')
+    assert not beman_module.get_beman_module('foo')
+    os.chdir(original_cwd)
 
 def test_find_beman_modules_in():
-    pass
+    tmpdir = create_test_git_repository()
+    tmpdir2 = create_test_git_repository()
+    original_cwd = os.getcwd()
+    os.chdir(tmpdir2.name)
+    beman_module.add_command(tmpdir.name, 'foo')
+    beman_module.add_command(tmpdir.name, 'bar')
+    beman_modules = beman_module.find_beman_modules_in(tmpdir2.name)
+    sha_process = subprocess.run(
+        ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
+        cwd=os.path.join(tmpdir2.name, 'foo'))
+    assert beman_modules[0].dirpath == os.path.join(tmpdir2.name, 'bar')
+    assert beman_modules[0].remote == tmpdir.name
+    assert beman_modules[0].commit_hash == sha_process.stdout.strip()
+    assert beman_modules[1].dirpath == os.path.join(tmpdir2.name, 'foo')
+    assert beman_modules[1].remote == tmpdir.name
+    assert beman_modules[1].commit_hash == sha_process.stdout.strip()
+    os.chdir(original_cwd)
 
 def test_cwd_git_repository_path():
     original_cwd = os.getcwd()

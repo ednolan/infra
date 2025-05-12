@@ -41,7 +41,7 @@ def parse_beman_module_file(path):
     if not 'commit_hash' in config['beman_module']:
         fail()
     return BemanModule(
-        pathlib.Path(path).resolve().parent,
+        str(pathlib.Path(path).resolve().parent),
         config['beman_module']['remote'], config['beman_module']['commit_hash'])
 
 def get_beman_module(dir):
@@ -61,8 +61,8 @@ def find_beman_modules_in(dir):
 
 def cwd_git_repository_path():
     process = subprocess.run(
-        ['git', 'rev-parse', '--show-toplevel'],
-        capture_output=True, text=True, check=False)
+        ['git', 'rev-parse', '--show-toplevel'], capture_output=True, text=True,
+        check=False)
     if process.returncode == 0:
         return process.stdout.strip()
     elif "fatal: not a git repository" in process.stderr:
@@ -73,7 +73,8 @@ def cwd_git_repository_path():
 def pull_beman_module_into_tmpdir(beman_module):
     tmpdir = tempfile.TemporaryDirectory()
     subprocess.run(
-        ['git', 'clone', beman_module.remote, tmpdir.name], capture_output=True, check=True)
+        ['git', 'clone', beman_module.remote, tmpdir.name], capture_output=True,
+        check=True)
     subprocess.run(
         ['git', '-C', tmpdir.name, 'reset', '--hard', beman_module.commit_hash],
         capture_output=True, check=True)
@@ -99,7 +100,25 @@ def update_command(remote, beman_module_path):
     pass
 
 def add_command(repository, path):
-    pass
+    tmpdir = tempfile.TemporaryDirectory()
+    subprocess.run(
+        ['git', 'clone', repository], capture_output=True, check=True, cwd=tmpdir.name)
+    repository_name = os.listdir(tmpdir.name)[0]
+    if not path:
+        path = repository_name
+    if os.path.exists(path):
+        raise Exception(f'{path} exists')
+    os.makedirs(path)
+    tmpdir_repo = os.path.join(tmpdir.name, repository_name)
+    sha_process = subprocess.run(
+        ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
+        cwd=tmpdir_repo)
+    with open(os.path.join(tmpdir_repo, '.beman_module'), 'w') as f:
+        f.write('[beman_module]\n')
+        f.write(f'remote={repository}\n')
+        f.write(f'commit_hash={sha_process.stdout.strip()}\n')
+    shutil.rmtree(os.path.join(tmpdir_repo, '.git'))
+    shutil.copytree(tmpdir_repo, path, dirs_exist_ok=True)
 
 def status_command(paths):
     if not paths:
@@ -125,7 +144,8 @@ def get_parser():
         '--remote', action='store_true',
         help='update a beman_module to its latest from upstream')
     parser_update.add_argument(
-        'beman_module_path', nargs='?', help='relative path to the beman_module to update')
+        'beman_module_path', nargs='?',
+        help='relative path to the beman_module to update')
     parser_add = subparsers.add_parser('add', help='add a new beman_module')
     parser_add.add_argument('repository', help='git repository to add')
     parser_add.add_argument(
