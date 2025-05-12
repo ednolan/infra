@@ -80,21 +80,18 @@ def clone_beman_module_into_tmpdir(beman_module):
         capture_output=True, check=True)
     return tmpdir
 
-def beman_module_pull(beman_module):
-    print(
-        'Pulling', beman_module.remote, 'at commit', beman_module.commit_hash, 'to',
-        beman_module.dirpath)
-    tmpdir = clone_beman_module_into_tmpdir(beman_module)
-    shutil.rmtree(os.path.join(tmpdir.name, '.git'))
-    shutil.copytree(tmpdir.name, beman_module.dirpath, dirs_exist_ok=True)
-
 def beman_module_status(beman_module):
     tmpdir = clone_beman_module_into_tmpdir(beman_module)
     if directory_compare(tmpdir.name, beman_module.dirpath, ['.beman_module', '.git']):
         status_character=' '
     else:
         status_character='+'
-    print(status_character, beman_module.commit_hash)
+    parent_repo_path = cwd_git_repository_path()
+    if not parent_repo_path:
+        raise Exception('this is not a git repository')
+    relpath = pathlib.Path(
+        beman_module.dirpath).relative_to(pathlib.Path(parent_repo_path))
+    return status_character + ' ' + beman_module.commit_hash + ' ' + str(relpath)
 
 def update_command(remote, beman_module_path):
     pass
@@ -134,7 +131,7 @@ def status_command(paths):
                 raise Exception(f'{path} is not a beman_module')
             beman_modules.append(beman_module)
     for beman_module in beman_modules:
-        beman_module_status(beman_module)
+        print(beman_module_status(beman_module))
 
 def get_parser():
     parser = argparse.ArgumentParser(description='Beman pseudo-submodule tool')

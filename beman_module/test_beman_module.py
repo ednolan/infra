@@ -1,6 +1,7 @@
 import beman_module
-import pathlib
 import os
+import pathlib
+import pytest
 import subprocess
 import tempfile
 
@@ -119,12 +120,13 @@ def test_find_beman_modules_in():
     sha_process = subprocess.run(
         ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
         cwd=os.path.join(tmpdir2.name, 'foo'))
+    sha = sha_process.stdout.strip()
     assert beman_modules[0].dirpath == os.path.join(tmpdir2.name, 'bar')
     assert beman_modules[0].remote == tmpdir.name
-    assert beman_modules[0].commit_hash == sha_process.stdout.strip()
+    assert beman_modules[0].commit_hash == sha
     assert beman_modules[1].dirpath == os.path.join(tmpdir2.name, 'foo')
     assert beman_modules[1].remote == tmpdir.name
-    assert beman_modules[1].commit_hash == sha_process.stdout.strip()
+    assert beman_modules[1].commit_hash == sha
     os.chdir(original_cwd)
 
 def test_cwd_git_repository_path():
@@ -147,17 +149,59 @@ def test_clone_beman_module_into_tmpdir():
     assert beman_module.directory_compare(tmpdir.name, tmpdir3.name, ['.git'])
     os.chdir(original_cwd)
 
-def test_beman_module_pull():
-    pass
-
 def test_beman_module_status():
-    pass
+    tmpdir = create_test_git_repository()
+    tmpdir2 = create_test_git_repository()
+    original_cwd = os.getcwd()
+    os.chdir(tmpdir2.name)
+    beman_module.add_command(tmpdir.name, 'foo')
+    sha_process = subprocess.run(
+        ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
+        cwd=os.path.join(tmpdir2.name, 'foo'))
+    sha = sha_process.stdout.strip()
+    assert '  ' + sha + ' foo' == beman_module.beman_module_status(
+        beman_module.get_beman_module(os.path.join(tmpdir2.name, 'foo')))
+    with open(os.path.join(os.path.join(tmpdir2.name, 'foo'), 'a.txt'), 'w') as f:
+        f.write('b')
+    assert '+ ' + sha + ' foo' == beman_module.beman_module_status(
+        beman_module.get_beman_module(os.path.join(tmpdir2.name, 'foo')))
+    os.chdir(original_cwd)
 
 def test_update_command():
     pass
 
-def test_status_command():
-    pass
+def test_add_command():
+    tmpdir = create_test_git_repository()
+    tmpdir2 = create_test_git_repository()
+    original_cwd = os.getcwd()
+    os.chdir(tmpdir2.name)
+    beman_module.add_command(tmpdir.name, 'foo')
+    sha_process = subprocess.run(
+        ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
+        cwd=os.path.join(tmpdir2.name, 'foo'))
+    sha = sha_process.stdout.strip()
+    assert beman_module.directory_compare(
+        tmpdir.name, os.path.join(tmpdir2.name, 'foo'), ['.git', '.beman_module'])
+    with open(os.path.join(os.path.join(tmpdir2.name, 'foo'), '.beman_module'), 'r') as f:
+        assert f.read() == f'[beman_module]\nremote={tmpdir.name}\ncommit_hash={sha}\n'
+    os.chdir(original_cwd)
+
+def test_status_command_no_paths(capsys):
+    tmpdir = create_test_git_repository()
+    tmpdir2 = create_test_git_repository()
+    original_cwd = os.getcwd()
+    os.chdir(tmpdir2.name)
+    beman_module.add_command(tmpdir.name, 'foo')
+    beman_module.add_command(tmpdir.name, 'bar')
+    sha_process = subprocess.run(
+        ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
+        cwd=os.path.join(tmpdir2.name, 'foo'))
+    with open(os.path.join(os.path.join(tmpdir2.name, 'bar'), 'a.txt'), 'w') as f:
+        f.write('b')
+    beman_module.status_command([])
+    sha = sha_process.stdout.strip()
+    assert capsys.readouterr().out == '+ ' + sha + ' bar\n' + '  ' + sha + ' foo\n'
+    os.chdir(original_cwd)
 
 def test_check_for_git():
     pass
