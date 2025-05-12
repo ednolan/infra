@@ -70,7 +70,7 @@ def cwd_git_repository_path():
     else:
         raise Exception("git rev-parse --show-toplevel failed")
 
-def pull_beman_module_into_tmpdir(beman_module):
+def clone_beman_module_into_tmpdir(beman_module):
     tmpdir = tempfile.TemporaryDirectory()
     subprocess.run(
         ['git', 'clone', beman_module.remote, tmpdir.name], capture_output=True,
@@ -84,12 +84,12 @@ def beman_module_pull(beman_module):
     print(
         'Pulling', beman_module.remote, 'at commit', beman_module.commit_hash, 'to',
         beman_module.dirpath)
-    tmpdir = pull_beman_module_into_tmpdir(beman_module)
+    tmpdir = clone_beman_module_into_tmpdir(beman_module)
     shutil.rmtree(os.path.join(tmpdir.name, '.git'))
     shutil.copytree(tmpdir.name, beman_module.dirpath, dirs_exist_ok=True)
 
 def beman_module_status(beman_module):
-    tmpdir = pull_beman_module_into_tmpdir(beman_module)
+    tmpdir = clone_beman_module_into_tmpdir(beman_module)
     if directory_compare(tmpdir.name, beman_module.dirpath, ['.beman_module', '.git']):
         status_character=' '
     else:

@@ -136,8 +136,16 @@ def test_cwd_git_repository_path():
     assert beman_module.cwd_git_repository_path() == tmpdir.name
     os.chdir(original_cwd)
 
-def test_pull_beman_module_into_tmpdir():
-    pass
+def test_clone_beman_module_into_tmpdir():
+    tmpdir = create_test_git_repository()
+    tmpdir2 = create_test_git_repository()
+    original_cwd = os.getcwd()
+    os.chdir(tmpdir2.name)
+    beman_module.add_command(tmpdir.name, 'foo')
+    tmpdir3 = beman_module.clone_beman_module_into_tmpdir(
+        beman_module.get_beman_module(os.path.join(tmpdir2.name, 'foo')))
+    assert beman_module.directory_compare(tmpdir.name, tmpdir3.name, ['.git'])
+    os.chdir(original_cwd)
 
 def test_beman_module_pull():
     pass
