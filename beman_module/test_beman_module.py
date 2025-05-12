@@ -18,7 +18,8 @@ def create_test_git_repository():
         subprocess.run(
             ['git', 'add', 'a.txt'], check=True, cwd=tmpdir.name, capture_output=True)
         subprocess.run(
-            ['git', 'commit', '-m', 'test', '--author=test <test@example.com>'],
+            ['git', '-c', 'user.name=test', '-c', 'user.email=test@example.com', 'commit',
+             '--author="test <test@example.com>"', '-m', 'test'],
             check=True, cwd=tmpdir.name, capture_output=True)
     make_commit('A')
     make_commit('a')
@@ -125,7 +126,7 @@ def test_find_beman_modules_in():
     beman_modules = beman_module.find_beman_modules_in(tmpdir2.name)
     sha_process = subprocess.run(
         ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
-        cwd=os.path.join(tmpdir2.name, 'foo'))
+        cwd=tmpdir.name)
     sha = sha_process.stdout.strip()
     assert beman_modules[0].dirpath == os.path.join(tmpdir2.name, 'bar')
     assert beman_modules[0].remote == tmpdir.name
@@ -174,7 +175,7 @@ def test_beman_module_status():
     beman_module.add_command(tmpdir.name, 'foo')
     sha_process = subprocess.run(
         ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
-        cwd=os.path.join(tmpdir2.name, 'foo'))
+        cwd=tmpdir.name)
     sha = sha_process.stdout.strip()
     assert '  ' + sha + ' foo' == beman_module.beman_module_status(
         beman_module.get_beman_module(os.path.join(tmpdir2.name, 'foo')))
@@ -244,7 +245,7 @@ def test_add_command():
     beman_module.add_command(tmpdir.name, 'foo')
     sha_process = subprocess.run(
         ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
-        cwd=os.path.join(tmpdir2.name, 'foo'))
+        cwd=tmpdir.name)
     sha = sha_process.stdout.strip()
     assert beman_module.directory_compare(
         tmpdir.name, os.path.join(tmpdir2.name, 'foo'), ['.git', '.beman_module'])
@@ -261,7 +262,7 @@ def test_status_command_no_paths(capsys):
     beman_module.add_command(tmpdir.name, 'bar')
     sha_process = subprocess.run(
         ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
-        cwd=os.path.join(tmpdir2.name, 'foo'))
+        cwd=tmpdir.name)
     with open(os.path.join(os.path.join(tmpdir2.name, 'bar'), 'a.txt'), 'w') as f:
         f.write('b')
     beman_module.status_command([])
@@ -278,7 +279,7 @@ def test_status_command_with_path(capsys):
     beman_module.add_command(tmpdir.name, 'bar')
     sha_process = subprocess.run(
         ['git', 'rev-parse', 'HEAD'], capture_output=True, check=True, text=True,
-        cwd=os.path.join(tmpdir2.name, 'foo'))
+        cwd=tmpdir.name)
     with open(os.path.join(os.path.join(tmpdir2.name, 'bar'), 'a.txt'), 'w') as f:
         f.write('b')
     beman_module.status_command(['bar'])
