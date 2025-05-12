@@ -59,7 +59,7 @@ def find_beman_modules_in(dir):
     for dirpath, _, filenames in os.walk(dir):
         if '.beman_module' in filenames:
             result.append(parse_beman_module_file(os.path.join(dirpath, '.beman_module')))
-    return result
+    return sorted(result, key=lambda module: module.dirpath)
 
 def cwd_git_repository_path():
     process = subprocess.run(
@@ -149,7 +149,7 @@ def status_command(paths):
         beman_modules = find_beman_modules_in(parent_repo_path)
     else:
         beman_modules = []
-        for path in sorted(paths):
+        for path in paths:
             beman_module = get_beman_module(path)
             if not beman_module:
                 raise Exception(f'{path} is not a beman_module')
