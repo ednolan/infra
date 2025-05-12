@@ -70,18 +70,19 @@ def cwd_git_repository_path():
     else:
         raise Exception("git rev-parse --show-toplevel failed")
 
-def clone_beman_module_into_tmpdir(beman_module):
+def clone_beman_module_into_tmpdir(beman_module, remote):
     tmpdir = tempfile.TemporaryDirectory()
     subprocess.run(
         ['git', 'clone', beman_module.remote, tmpdir.name], capture_output=True,
         check=True)
-    subprocess.run(
-        ['git', '-C', tmpdir.name, 'reset', '--hard', beman_module.commit_hash],
-        capture_output=True, check=True)
+    if not remote:
+        subprocess.run(
+            ['git', '-C', tmpdir.name, 'reset', '--hard', beman_module.commit_hash],
+            capture_output=True, check=True)
     return tmpdir
 
 def beman_module_status(beman_module):
-    tmpdir = clone_beman_module_into_tmpdir(beman_module)
+    tmpdir = clone_beman_module_into_tmpdir(beman_module, False)
     if directory_compare(tmpdir.name, beman_module.dirpath, ['.beman_module', '.git']):
         status_character=' '
     else:
@@ -93,8 +94,29 @@ def beman_module_status(beman_module):
         beman_module.dirpath).relative_to(pathlib.Path(parent_repo_path))
     return status_character + ' ' + beman_module.commit_hash + ' ' + str(relpath)
 
-def update_command(remote, beman_module_path):
-    pass
+def beman_module_update(beman_module, remote):
+    tmpdir = clone_beman_module_into_tmpdir(beman_module, remote)
+    shutil.rmtree(beman_module.dirpath)
+    with open(os.path.join(tmpdir.name, '.beman_module'), 'w') as f:
+        f.write('[beman_module]\n')
+        f.write(f'remote={beman_module.remote}\n')
+        f.write(f'commit_hash={beman_module.commit_hash}\n')
+    shutil.rmtree(os.path.join(tmpdir.name, '.git'))
+    shutil.copytree(tmpdir.name, beman_module.dirpath)
+
+def update_command(remote, path):
+    if not path:
+        parent_repo_path = cwd_git_repository_path()
+        if not parent_repo_path:
+            raise Exception('this is not a git repository')
+        beman_modules = find_beman_modules_in(parent_repo_path)
+    else:
+        beman_module = get_beman_module(path)
+        if not beman_module:
+            raise Exception(f'{path} is not a beman_module')
+        beman_modules = [beman_module]
+    for beman_module in beman_modules:
+        beman_module_update(beman_module, remote)
 
 def add_command(repository, path):
     tmpdir = tempfile.TemporaryDirectory()

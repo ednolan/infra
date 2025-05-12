@@ -8,14 +8,16 @@ import tempfile
 def create_test_git_repository():
     tmpdir = tempfile.TemporaryDirectory()
     subprocess.run(['git', 'init'], check=True, cwd=tmpdir.name, capture_output=True)
-    with open(os.path.join(tmpdir.name, 'a.txt'), 'w') as f:
-        f.write('a')
-
-    subprocess.run(
-        ['git', 'add', 'a.txt'], check=True, cwd=tmpdir.name, capture_output=True)
-    subprocess.run(
-        ['git', 'commit', '-m', 'test', '--author=test <test@example.com>'], check=True,
-        cwd=tmpdir.name, capture_output=True)
+    def make_commit(a_txt_contents):
+        with open(os.path.join(tmpdir.name, 'a.txt'), 'w') as f:
+            f.write(a_txt_contents)
+        subprocess.run(
+            ['git', 'add', 'a.txt'], check=True, cwd=tmpdir.name, capture_output=True)
+        subprocess.run(
+            ['git', 'commit', '-m', 'test', '--author=test <test@example.com>'],
+            check=True, cwd=tmpdir.name, capture_output=True)
+    make_commit('A')
+    make_commit('a')
     return tmpdir
 
 def test_directory_compare():
@@ -143,9 +145,20 @@ def test_clone_beman_module_into_tmpdir():
     tmpdir2 = create_test_git_repository()
     original_cwd = os.getcwd()
     os.chdir(tmpdir2.name)
+    sha_process = subprocess.run(
+        ['git', 'rev-parse', 'HEAD^'], capture_output=True, check=True, text=True,
+        cwd=tmpdir.name)
+    sha = sha_process.stdout.strip()
     beman_module.add_command(tmpdir.name, 'foo')
-    tmpdir3 = beman_module.clone_beman_module_into_tmpdir(
-        beman_module.get_beman_module(os.path.join(tmpdir2.name, 'foo')))
+    module = beman_module.get_beman_module(os.path.join(tmpdir2.name, 'foo'))
+    module.commit_hash = sha
+    tmpdir3 = beman_module.clone_beman_module_into_tmpdir(module, False)
+    assert not beman_module.directory_compare(tmpdir.name, tmpdir3.name, ['.git'])
+    tmpdir4 = beman_module.clone_beman_module_into_tmpdir(module, True)
+    assert beman_module.directory_compare(tmpdir.name, tmpdir4.name, ['.git'])
+    subprocess.run(
+        ['git', 'reset', '--hard', sha], capture_output=True, check=True,
+        cwd=tmpdir.name)
     assert beman_module.directory_compare(tmpdir.name, tmpdir3.name, ['.git'])
     os.chdir(original_cwd)
 
