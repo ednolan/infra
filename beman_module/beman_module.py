@@ -194,26 +194,9 @@ def check_for_git():
     pass
 
 def main():
-    # try:
-        check_for_git()
-        args = parse_args(sys.argv[1:])
-        run_command(args)
-    # except Exception as e:
-    #     print("Error:", e, file=sys.stderr)
-    #     sys.exit(1)
-    # script_path = pathlib.Path(__file__).resolve().parent
-    # beman_module_directory = script_path.parent
-    # infra_parent = beman_module_directory.parent
-    # beman_module_dirs = find_beman_module_dirs_in(infra_parent)
-    # print('Found beman_modules at: ', beman_module_dirs)
-    # beman_modules = [get_beman_module(dir) for dir in beman_module_dirs]
-    # for beman_module in beman_modules:
-    #     if args.pull:
-    #         beman_module_pull(beman_module)
-    #     elif args.check:
-    #         beman_module_check(beman_module)
-    #     else:
-    #         raise Exception('Specify either --pull or --check')
+    check_for_git()
+    args = parse_args(sys.argv[1:])
+    run_command(args)
 
 if __name__ == '__main__':
     main()
